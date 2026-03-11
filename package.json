@@ -1,0 +1,32 @@
+{
+  "name": "sovereign-digital-imperium",
+  "version": "1.0.0",
+  "private": true,
+  "description": "THE SOVEREIGN MOTHER FOLDER - Unified Monorepo (Web 2.0 + 2.5 + 3.0)",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web2-predator",
+    "dev:predator": "npm run dev --workspace=apps/web2-predator",
+    "dev:store": "npm run dev --workspace=apps/web25-store",
+    "dev:economy": "npm run dev --workspace=apps/web3-economy",
+    "dev:command": "npm run dev:sandbox --workspace=apps/command-center",
+    "build": "npm run build --workspaces --if-present",
+    "build:predator": "npm run build --workspace=apps/web2-predator",
+    "build:store": "npm run build --workspace=apps/web25-store",
+    "build:economy": "npm run build --workspace=apps/web3-economy",
+    "build:command": "npm run build --workspace=apps/command-center",
+    "deploy:predator": "npm run deploy --workspace=apps/web2-predator",
+    "deploy:store": "npm run deploy --workspace=apps/web25-store",
+    "deploy:economy": "npm run deploy --workspace=apps/web3-economy",
+    "deploy:command": "npm run deploy --workspace=apps/command-center",
+    "deploy:all": "npm run deploy:predator && npm run deploy:store && npm run deploy:economy && npm run deploy:command",
+    "clean": "rm -rf apps/*/node_modules apps/*/dist packages/*/node_modules",
+    "status": "echo '=== PREDATOR ===' && curl -s http://localhost:3000/api/health 2>/dev/null || echo 'offline'",
+    "git:commit": "git add . && git commit -m",
+    "git:push": "git push origin main"
+  }
+}

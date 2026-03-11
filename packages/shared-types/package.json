@@ -1,0 +1,8 @@
+{
+  "name": "@sovereign/shared-types",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "description": "Shared TypeScript types for Sovereign ecosystem"
+}
