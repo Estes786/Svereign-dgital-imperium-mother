@@ -16,7 +16,7 @@ This is the **MOTHER FOLDER (Monorepo)** that unifies the entire Sovereign Digit
 
 ## URLs
 
-- **Gateway (Command Center)**: Live on sandbox
+- **Command Center (LIVE)**: https://sovereign-command-center.pages.dev
 - **GitHub (Mother Folder)**: https://github.com/Estes786/Svereign-dgital-imperium-mother
 - **API Health**: `/api/health`
 - **API Ecosystem**: `/api/ecosystem`
@@ -140,11 +140,11 @@ cd Svereign-dgital-imperium-mother
 # Install all dependencies (workspaces)
 npm install
 
-# Build the gateway
-cd apps/gateway && npm run build
+# Build the command center
+cd apps/command-center && npm run build
 
-# Start dev server
-npm run dev:sandbox
+# Start dev server (PM2)
+pm2 start ecosystem.config.cjs
 # -> http://localhost:3000
 ```
 
@@ -160,18 +160,19 @@ npm run dev:sandbox
 ## Deployment
 
 - **Platform**: Cloudflare Pages
-- **Status**: LIVE (Gateway)
+- **Status**: LIVE (Command Center deployed)
 - **Tech Stack**: Hono + Vite + npm Workspaces
-- **Build Command**: `cd apps/gateway && npm run build`
-- **Output Dir**: `apps/gateway/dist`
+- **Build Command**: `cd apps/command-center && npm run build`
+- **Output Dir**: `apps/command-center/dist`
+- **Cloudflare URL**: https://sovereign-command-center.pages.dev
 
 ## Current Phase
 
 | Phase | Status |
 |:------|:-------|
 | S001: Foundation (Mother Folder Init) | COMPLETED |
-| S002: Brain Sync (Shared Logic) | COMPLETED |
-| S003: Predator Crew (CrewAI) | IN PROGRESS |
+| S002: Merge, Sync, Deploy Command Center | COMPLETED |
+| S003: Scout Agent (Groq + SerpAPI) | **NEXT** |
 | S004: Zero-Touch Builder | PENDING |
 | S005: Harvest (Revenue & Scaling) | PENDING |
 | S006: Web 3.0 Ascension | FUTURE |
