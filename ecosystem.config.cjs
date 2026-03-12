@@ -1,10 +1,10 @@
 module.exports = {
   apps: [
     {
-      name: 'sovereign-imperium',
+      name: 'sovereign-predator',
       script: 'npx',
       args: 'wrangler pages dev dist --ip 0.0.0.0 --port 3000',
-      cwd: './apps/command-center',
+      cwd: './apps/web2-predator',
       env: {
         NODE_ENV: 'development',
         PORT: 3000

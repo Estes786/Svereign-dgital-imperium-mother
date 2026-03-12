@@ -10,6 +10,20 @@ import {
   getLastHuntResults,
   type ScoredLead
 } from './agents/scout'
+import {
+  bulkHuntWorkflow,
+  getBulkHuntStatus,
+  DEFAULT_HUNT_CITIES,
+  DEFAULT_HUNT_CATEGORIES,
+  type HuntMission
+} from './agents/bulk-hunter'
+import {
+  generateWAMessage,
+  generateAIMessage,
+  batchGenerateMessages,
+  type WAMessage
+} from './agents/closer'
+import { createSupabaseClient } from './lib/supabase'
 
 type Bindings = {
   GROQ_API_KEY: string
@@ -24,313 +38,670 @@ const app = new Hono<{ Bindings: Bindings }>()
 app.use('/api/*', cors())
 
 // ============================================================
-// DUMMY DATA (Phase 2 - will be replaced by Supabase in Phase 6)
+// IN-MEMORY STORES (augmented with live data)
 // ============================================================
-const dummyLeads = [
-  { id: 'lead-001', business_name: 'Barbershop Mas Joko', category: 'barber', address: 'Jl. Kemang Raya No. 12, Jakarta Selatan', phone: '+6281234567890', owner_name: 'Joko Susanto', rating: 4.2, review_count: 87, website_url: null, google_maps_url: 'https://maps.google.com/?cid=123456', thumbnail: null, ai_score: 92, digital_gap_score: 85, digital_gap_analysis: { has_website: false, has_booking: false, social_active: true, needs: ['website', 'booking system', 'online presence'], summary: 'Belum punya website, butuh kehadiran digital' }, recommended_approach: 'Tawarkan website + booking system gratis demo', status: 'new', source: 'dummy', created_at: '2026-03-07T10:00:00Z' },
-  { id: 'lead-002', business_name: 'Kopi Nusantara Cafe', category: 'cafe', address: 'Jl. Sudirman No. 45, Jakarta Pusat', phone: '+6281345678901', owner_name: 'Dewi Sari', rating: 4.5, review_count: 234, website_url: null, google_maps_url: 'https://maps.google.com/?cid=234567', thumbnail: null, ai_score: 88, digital_gap_score: 75, digital_gap_analysis: { has_website: false, has_booking: false, social_active: true, needs: ['website', 'online menu', 'order system'], summary: 'Populer tapi belum punya website' }, recommended_approach: 'Tawarkan website dengan menu online + order via WA', status: 'new', source: 'dummy', created_at: '2026-03-07T10:05:00Z' },
-  { id: 'lead-003', business_name: 'Salon Cantik Bunda', category: 'salon', address: 'Jl. Fatmawati No. 78, Jakarta Selatan', phone: '+6281456789012', owner_name: 'Sri Wahyuni', rating: 3.8, review_count: 42, website_url: null, google_maps_url: 'https://maps.google.com/?cid=345678', thumbnail: null, ai_score: 95, digital_gap_score: 95, digital_gap_analysis: { has_website: false, has_booking: false, social_active: false, needs: ['website', 'booking', 'social media', 'gallery'], summary: 'Tidak punya website dan tidak aktif di sosial media' }, recommended_approach: 'Full digital makeover - website + booking + gallery', status: 'contacted', source: 'dummy', created_at: '2026-03-07T09:30:00Z' },
-  { id: 'lead-004', business_name: 'Bengkel Maju Jaya', category: 'workshop', address: 'Jl. TB Simatupang No. 33, Jakarta Selatan', phone: '+6281567890123', owner_name: 'Budi Hartono', rating: 4.0, review_count: 156, website_url: 'http://bengkelmajujaya.blogspot.com', google_maps_url: 'https://maps.google.com/?cid=456789', thumbnail: null, ai_score: 72, digital_gap_score: 60, digital_gap_analysis: { has_website: true, has_booking: false, social_active: false, needs: ['modern website', 'booking system'], summary: 'Punya blogspot tapi butuh website modern' }, recommended_approach: 'Upgrade dari blogspot ke website profesional', status: 'new', source: 'dummy', created_at: '2026-03-07T10:15:00Z' },
-  { id: 'lead-005', business_name: 'Warung Makan Sederhana', category: 'cafe', address: 'Jl. Blok M No. 10, Jakarta Selatan', phone: '+6281678901234', owner_name: 'Pak Agus', rating: 4.7, review_count: 512, website_url: null, google_maps_url: 'https://maps.google.com/?cid=567890', thumbnail: null, ai_score: 78, digital_gap_score: 70, digital_gap_analysis: { has_website: false, has_booking: false, social_active: true, needs: ['website', 'online menu'], summary: 'Warung populer tanpa website' }, recommended_approach: 'Website dengan menu + lokasi + review showcase', status: 'interested', source: 'dummy', created_at: '2026-03-07T08:45:00Z' },
-  { id: 'lead-006', business_name: 'Pangkas Rambut Abang', category: 'barber', address: 'Jl. Cipete Raya No. 55, Jakarta Selatan', phone: '+6281789012345', owner_name: 'Abang Rizky', rating: 3.5, review_count: 23, website_url: null, google_maps_url: 'https://maps.google.com/?cid=678901', thumbnail: null, ai_score: 97, digital_gap_score: 98, digital_gap_analysis: { has_website: false, has_booking: false, social_active: false, needs: ['everything'], summary: 'Tidak ada kehadiran digital sama sekali' }, recommended_approach: 'Full package - brand identity + website + booking', status: 'new', source: 'dummy', created_at: '2026-03-07T10:20:00Z' },
-  { id: 'lead-007', business_name: 'Nail Art Studio Rina', category: 'salon', address: 'Jl. Gandaria No. 22, Jakarta Selatan', phone: '+6281890123456', owner_name: 'Rina Marlina', rating: 4.8, review_count: 89, website_url: null, google_maps_url: 'https://maps.google.com/?cid=789012', thumbnail: null, ai_score: 86, digital_gap_score: 80, digital_gap_analysis: { has_website: false, has_booking: false, social_active: true, needs: ['website', 'portfolio gallery', 'booking'], summary: 'Aktif di Instagram tapi belum punya website' }, recommended_approach: 'Website portfolio + booking online', status: 'new', source: 'dummy', created_at: '2026-03-07T10:25:00Z' },
-  { id: 'lead-008', business_name: 'Kedai Kopi Luwak', category: 'cafe', address: 'Jl. Senopati No. 8, Jakarta Selatan', phone: '+6281901234567', owner_name: 'Ahmad Fauzi', rating: 4.3, review_count: 178, website_url: null, google_maps_url: 'https://maps.google.com/?cid=890123', thumbnail: null, ai_score: 82, digital_gap_score: 72, digital_gap_analysis: { has_website: false, has_booking: false, social_active: true, needs: ['website', 'menu online', 'delivery info'], summary: 'Kopi populer tapi belum punya website' }, recommended_approach: 'Website premium + menu interaktif', status: 'converted', source: 'dummy', created_at: '2026-03-06T14:00:00Z' },
-]
-
-// Live scout results storage (merged with dummy on read)
 let liveScoutLeads: ScoredLead[] = []
+let generatedMessages: WAMessage[] = []
 
-const dummyMessages = [
-  { id: 'msg-001', lead_id: 'lead-003', message_text: 'Halo Kak Sri! Saya lihat Salon Cantik Bunda punya rating 3.8 di Google Maps. Mau saya buatkan website + sistem booking GRATIS? Pelanggan bisa booking dari HP langsung. Demo: [link]', message_type: 'initial', wa_deeplink: 'https://wa.me/6281456789012?text=Halo%20Kak%20Sri', sent_at: '2026-03-07T11:00:00Z', response_status: 'sent', created_at: '2026-03-07T10:55:00Z' },
-  { id: 'msg-002', lead_id: 'lead-005', message_text: 'Halo Pak Agus! Warung Sederhana terkenal banget ya, 512 review! Mau saya buatkan menu online biar pelanggan bisa lihat dari HP? GRATIS demo dulu. Tertarik?', message_type: 'initial', wa_deeplink: 'https://wa.me/6281678901234?text=Halo%20Pak%20Agus', sent_at: '2026-03-07T09:30:00Z', response_status: 'replied', created_at: '2026-03-07T09:25:00Z' },
-  { id: 'msg-003', lead_id: 'lead-008', message_text: 'Pak Ahmad, website demo Kedai Kopi Luwak sudah jadi! Cek di sini: [demo-link]. Kalau cocok, harga spesial Rp 200rb aja. Deal?', message_type: 'closing', wa_deeplink: 'https://wa.me/6281901234567?text=Pak%20Ahmad', sent_at: '2026-03-06T16:00:00Z', response_status: 'replied', created_at: '2026-03-06T15:55:00Z' },
+const agentLogs: any[] = [
+  { id: 'log-001', agent_type: 'scout', action: 'search_businesses', status: 'success', execution_time_ms: 2340, details: 'Session 003 - Initial scout test', created_at: '2026-03-11T10:00:00Z' },
+  { id: 'log-002', agent_type: 'scout', action: 'ai_scoring', status: 'success', execution_time_ms: 1850, details: 'Session 003 - AI scoring pipeline', created_at: '2026-03-11T10:01:00Z' },
+  { id: 'log-003', agent_type: 'system', action: 'session_004_start', status: 'success', execution_time_ms: 0, details: 'Session 004 - Bulk Hunt + Closer Agent initialized', created_at: '2026-03-12T00:00:00Z' },
 ]
 
-const dummyTransactions = [
-  { id: 'txn-001', lead_id: 'lead-008', amount_idr: 200000, amount_usd: 13.33, description: 'Landing Page - Kedai Kopi Luwak', payment_method: 'transfer', payment_status: 'paid', invoice_number: 'INV-2026-001', paid_at: '2026-03-06T18:00:00Z', created_at: '2026-03-06T16:30:00Z' },
-]
+function addLog(agentType: string, action: string, status: string, details: string, timeMs: number = 0) {
+  agentLogs.unshift({
+    id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    agent_type: agentType,
+    action,
+    status,
+    execution_time_ms: timeMs,
+    details,
+    created_at: new Date().toISOString()
+  })
+}
 
-const dummyDemos = [
-  { id: 'demo-001', lead_id: 'lead-008', business_name: 'Kedai Kopi Luwak', template_type: 'cafe', deploy_url: '/demo/demo-001', status: 'active', views_count: 12, created_at: '2026-03-06T15:30:00Z' },
-  { id: 'demo-002', lead_id: 'lead-003', business_name: 'Salon Cantik Bunda', template_type: 'salon', deploy_url: '/demo/demo-002', status: 'deployed', views_count: 3, created_at: '2026-03-07T11:30:00Z' },
-]
-
-const dummyAgentLogs: any[] = [
-  { id: 'log-001', agent_type: 'scout', action: 'search_businesses', status: 'success', execution_time_ms: 2340, created_at: '2026-03-07T10:00:00Z' },
-  { id: 'log-002', agent_type: 'scout', action: 'ai_scoring', status: 'success', execution_time_ms: 1850, created_at: '2026-03-07T10:01:00Z' },
-  { id: 'log-003', agent_type: 'closer', action: 'generate_message', status: 'success', execution_time_ms: 980, created_at: '2026-03-07T10:55:00Z' },
-  { id: 'log-004', agent_type: 'architect', action: 'generate_website', status: 'success', execution_time_ms: 4200, created_at: '2026-03-06T15:30:00Z' },
-  { id: 'log-005', agent_type: 'harvester', action: 'record_payment', status: 'success', execution_time_ms: 350, created_at: '2026-03-06T18:00:00Z' },
-  { id: 'log-006', agent_type: 'closer', action: 'generate_message', status: 'success', execution_time_ms: 1100, created_at: '2026-03-07T09:25:00Z' },
-  { id: 'log-007', agent_type: 'architect', action: 'generate_website', status: 'success', execution_time_ms: 3800, created_at: '2026-03-07T11:30:00Z' },
-  { id: 'log-008', agent_type: 'orchestrator', action: 'predator_loop', status: 'success', execution_time_ms: 15000, created_at: '2026-03-07T10:00:00Z' },
-]
-
-// Helper: get all leads (dummy + live scout results)
-function getAllLeads() {
-  return [...dummyLeads, ...liveScoutLeads]
+// Helper: get all scout leads
+function getAllScoutLeads() {
+  return [...liveScoutLeads]
 }
 
 // ============================================================
-// API ROUTES - Existing (Phase 2)
+// API ROUTES - Core
 // ============================================================
 
 app.get('/api/health', (c) => {
   const scout = getScoutStatus()
+  const bulk = getBulkHuntStatus()
   return c.json({
-    status: 'online', engine: 'sovereign-predator', version: '3.0.0', phase: 3,
+    status: 'online',
+    engine: 'sovereign-predator',
+    version: '4.0.0',
+    phase: 4,
+    session: '004',
     agents: {
       scout: scout.state,
-      closer: 'idle', architect: 'idle', harvester: 'idle', orchestrator: 'idle'
+      bulk_hunter: bulk?.status || 'idle',
+      closer: generatedMessages.length > 0 ? 'active' : 'idle',
+      architect: 'idle',
+      harvester: 'idle',
+      orchestrator: 'idle'
     },
-    scout_status: scout,
+    capabilities: [
+      'single_hunt', 'bulk_hunt', 'ai_scoring',
+      'supabase_storage', 'wa_closer', 'ai_messages'
+    ],
     timestamp: new Date().toISOString()
   })
 })
 
-app.get('/api/stats', (c) => {
-  const allLeads = getAllLeads()
-  const totalRevenue = dummyTransactions.filter(t => t.payment_status === 'paid').reduce((s, t) => s + t.amount_idr, 0)
+// GET /api/stats - Dashboard overview stats (from Supabase)
+app.get('/api/stats', async (c) => {
+  const scout = getScoutStatus()
+  const bulk = getBulkHuntStatus()
+
+  // Try to get real counts from Supabase
+  let dbLeadCount = 0
+  let dbHighScoreCount = 0
+  try {
+    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const db = createSupabaseClient(c.env)
+      const allLeads = await db.select('hunting_leads', 'select=id,ai_score,status')
+      dbLeadCount = allLeads.length
+      dbHighScoreCount = allLeads.filter((l: any) => l.ai_score >= 80).length
+    }
+  } catch (_) { /* fallback to in-memory */ }
+
+  const totalLeads = dbLeadCount || liveScoutLeads.length
+  const hotLeads = dbHighScoreCount || liveScoutLeads.filter(l => l.ai_score >= 80).length
+
   return c.json({
-    leads: allLeads.length,
-    contacted: allLeads.filter(l => l.status !== 'new').length,
-    conversions: allLeads.filter(l => l.status === 'converted').length,
-    demos_deployed: dummyDemos.length,
-    messages_sent: dummyMessages.length,
-    revenue: totalRevenue,
-    revenue_formatted: 'Rp ' + totalRevenue.toLocaleString('id-ID'),
-    target: 7500000, target_formatted: 'Rp 7.500.000', target_usd: 500,
-    progress_percent: Math.round((totalRevenue / 7500000) * 100),
-    today: { leads_found: liveScoutLeads.length + 6, messages_sent: 1, websites_deployed: 1, revenue: 0 },
-    scout_leads: liveScoutLeads.length
+    leads: totalLeads,
+    hot_leads: hotLeads,
+    contacted: 0,
+    conversions: 0,
+    demos_deployed: 0,
+    messages_generated: generatedMessages.length,
+    revenue: 0,
+    revenue_formatted: 'Rp 0',
+    target: 7500000,
+    target_formatted: 'Rp 7.500.000',
+    target_usd: 500,
+    progress_percent: 0,
+    scout_status: scout.state,
+    bulk_status: bulk?.status || 'idle',
+    bulk_progress: bulk ? `${bulk.hunts_completed}/${bulk.hunts_total}` : null,
+    today: {
+      leads_found: liveScoutLeads.length,
+      messages_generated: generatedMessages.length,
+      hunts_run: bulk?.hunts_completed || 0
+    }
   })
 })
 
-app.get('/api/stats/dashboard', (c) => {
-  const allLeads = getAllLeads()
-  const totalRevenue = dummyTransactions.filter(t => t.payment_status === 'paid').reduce((s, t) => s + t.amount_idr, 0)
+// GET /api/stats/dashboard - Full dashboard data
+app.get('/api/stats/dashboard', async (c) => {
   const scout = getScoutStatus()
+  const bulk = getBulkHuntStatus()
+
+  let dbLeads: any[] = []
+  try {
+    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const db = createSupabaseClient(c.env)
+      dbLeads = await db.select('hunting_leads', 'select=id,ai_score,status,category,created_at&order=created_at.desc&limit=100')
+    }
+  } catch (_) {}
+
+  const totalLeads = dbLeads.length || liveScoutLeads.length
+
   return c.json({
     overview: {
-      total_leads: allLeads.length,
-      hot_leads: allLeads.filter(l => l.ai_score >= 80).length,
-      contacted: allLeads.filter(l => l.status === 'contacted').length,
-      interested: allLeads.filter(l => l.status === 'interested').length,
-      converted: allLeads.filter(l => l.status === 'converted').length,
-      rejected: 0,
-      scout_leads: liveScoutLeads.length
+      total_leads: totalLeads,
+      hot_leads: dbLeads.filter((l: any) => l.ai_score >= 80).length || liveScoutLeads.filter(l => l.ai_score >= 80).length,
+      contacted: dbLeads.filter((l: any) => l.status === 'contacted').length,
+      interested: dbLeads.filter((l: any) => l.status === 'interested').length,
+      converted: dbLeads.filter((l: any) => l.status === 'converted').length,
+      new_leads: dbLeads.filter((l: any) => l.status === 'new').length,
+      in_memory_leads: liveScoutLeads.length,
+      messages_generated: generatedMessages.length
     },
-    revenue: { total: totalRevenue, today: 0, this_week: totalRevenue, this_month: totalRevenue, target: 7500000, progress_percent: Math.round((totalRevenue / 7500000) * 100) },
+    revenue: {
+      total: 0, today: 0, this_week: 0, this_month: 0,
+      target: 7500000, progress_percent: 0
+    },
     agents: {
-      scout: { status: scout.state, last_run: scout.last_run || '2026-03-07T10:01:00Z', total_runs: scout.last_run ? 3 : 2, results: scout.results_count },
-      closer: { status: 'idle', last_run: '2026-03-07T10:55:00Z', total_runs: 3 },
-      architect: { status: 'idle', last_run: '2026-03-07T11:30:00Z', total_runs: 2 },
-      harvester: { status: 'idle', last_run: '2026-03-06T18:00:00Z', total_runs: 1 }
+      scout: {
+        status: scout.state,
+        last_run: scout.last_run,
+        results: scout.results_count,
+        current_step: scout.current_step
+      },
+      bulk_hunter: {
+        status: bulk?.status || 'idle',
+        cities_completed: bulk?.cities_completed || 0,
+        cities_total: bulk?.cities_total || 0,
+        hunts_completed: bulk?.hunts_completed || 0,
+        hunts_total: bulk?.hunts_total || 0,
+        total_leads: bulk?.total_leads || 0,
+        total_saved: bulk?.total_saved || 0,
+        errors: bulk?.errors?.length || 0
+      },
+      closer: {
+        status: generatedMessages.length > 0 ? 'active' : 'idle',
+        messages_generated: generatedMessages.length
+      }
     },
-    recent_activity: dummyAgentLogs.slice(0, 5)
+    recent_activity: agentLogs.slice(0, 10),
+    categories_breakdown: getCategoryBreakdown(dbLeads)
   })
 })
 
-app.get('/api/leads', (c) => {
+function getCategoryBreakdown(dbLeads: any[]) {
+  const cats: Record<string, number> = {}
+  for (const l of dbLeads) {
+    cats[l.category] = (cats[l.category] || 0) + 1
+  }
+  return cats
+}
+
+// ============================================================
+// API ROUTES - Leads (Supabase-first)
+// ============================================================
+
+// GET /api/leads - Fetch from Supabase (primary) with in-memory fallback
+app.get('/api/leads', async (c) => {
+  const source = c.req.query('source') // 'db', 'memory', or undefined (all)
   const status = c.req.query('status')
   const category = c.req.query('category')
   const search = c.req.query('search')
   const minScore = parseInt(c.req.query('min_score') || '0')
-  const source = c.req.query('source') // 'scout' to filter only scout leads
-  let filtered = source === 'scout' ? [...liveScoutLeads] : getAllLeads()
+  const limit = parseInt(c.req.query('limit') || '50')
+
+  // Fetch from Supabase
+  if (source !== 'memory') {
+    try {
+      if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+        const db = createSupabaseClient(c.env)
+        let query = `order=ai_score.desc&limit=${limit}`
+        if (status) query += `&status=eq.${status}`
+        if (category) query += `&category=eq.${category}`
+        if (minScore > 0) query += `&ai_score=gte.${minScore}`
+        if (search) query += `&business_name=ilike.*${search}*`
+
+        const leads = await db.select('hunting_leads', query)
+        return c.json({
+          data: leads,
+          total: leads.length,
+          source: 'supabase',
+          in_memory_count: liveScoutLeads.length
+        })
+      }
+    } catch (err: any) {
+      // Fallback to in-memory
+      if (source === 'db') {
+        return c.json({ error: 'Supabase unavailable', message: err.message }, 500)
+      }
+    }
+  }
+
+  // In-memory fallback
+  let filtered = [...liveScoutLeads]
   if (status) filtered = filtered.filter(l => l.status === status)
   if (category) filtered = filtered.filter(l => l.category === category)
-  if (search) filtered = filtered.filter(l => l.business_name.toLowerCase().includes(search.toLowerCase()) || l.address.toLowerCase().includes(search.toLowerCase()))
+  if (search) filtered = filtered.filter(l =>
+    l.business_name.toLowerCase().includes(search.toLowerCase()) ||
+    l.address.toLowerCase().includes(search.toLowerCase())
+  )
   if (minScore > 0) filtered = filtered.filter(l => l.ai_score >= minScore)
   filtered.sort((a, b) => b.ai_score - a.ai_score)
-  return c.json({ data: filtered, total: filtered.length, page: 1, per_page: 20, scout_count: liveScoutLeads.length })
+
+  return c.json({
+    data: filtered.slice(0, limit),
+    total: filtered.length,
+    source: 'memory'
+  })
 })
 
-app.get('/api/leads/:id', (c) => {
-  const allLeads = getAllLeads()
-  const lead = allLeads.find(l => l.id === c.req.param('id'))
+// GET /api/leads/db - Direct Supabase query
+app.get('/api/leads/db', async (c) => {
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Missing Supabase credentials' }, 500)
+  }
+  try {
+    const db = createSupabaseClient(c.env)
+    const status = c.req.query('status')
+    const category = c.req.query('category')
+    const minScore = c.req.query('min_score')
+    let query = 'order=ai_score.desc&limit=100'
+    if (status) query += `&status=eq.${status}`
+    if (category) query += `&category=eq.${category}`
+    if (minScore) query += `&ai_score=gte.${minScore}`
+    const leads = await db.select('hunting_leads', query)
+    return c.json({ data: leads, total: leads.length, source: 'supabase' })
+  } catch (error: any) {
+    return c.json({ error: 'Failed to fetch from Supabase', message: error.message }, 500)
+  }
+})
+
+// POST /api/leads/save - Save leads to Supabase
+app.post('/api/leads/save', async (c) => {
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Missing Supabase credentials' }, 500)
+  }
+  try {
+    const body = await c.req.json()
+    const leadsToSave = body.leads || liveScoutLeads
+    if (!leadsToSave.length) {
+      return c.json({ error: 'No leads to save' }, 400)
+    }
+    const db = createSupabaseClient(c.env)
+    const rows = leadsToSave.map((l: ScoredLead) => ({
+      business_name: l.business_name, category: l.category, address: l.address,
+      phone: l.phone, owner_name: l.owner_name, rating: l.rating,
+      review_count: l.review_count, website_url: l.website_url,
+      google_maps_url: l.google_maps_url, thumbnail: l.thumbnail,
+      ai_score: l.ai_score, digital_gap_score: l.digital_gap_score,
+      digital_gap_analysis: l.digital_gap_analysis,
+      recommended_approach: l.recommended_approach,
+      status: l.status || 'new', source: l.source || 'scout_agent'
+    }))
+    const saved = await db.insert('hunting_leads', rows)
+    addLog('scout', 'save_to_supabase', 'success', `Saved ${saved.length} leads`)
+    return c.json({ success: true, saved: saved.length })
+  } catch (error: any) {
+    return c.json({ error: 'Save failed', message: error.message }, 500)
+  }
+})
+
+// PATCH /api/leads/db/:id - Update lead in Supabase
+app.patch('/api/leads/db/:id', async (c) => {
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Missing Supabase credentials' }, 500)
+  }
+  try {
+    const db = createSupabaseClient(c.env)
+    const id = c.req.param('id')
+    const body = await c.req.json()
+    const updated = await db.update('hunting_leads', body, `id=eq.${id}`)
+    return c.json({ success: true, data: updated })
+  } catch (error: any) {
+    return c.json({ error: 'Update failed', message: error.message }, 500)
+  }
+})
+
+// GET /api/leads/:id
+app.get('/api/leads/:id', async (c) => {
+  const id = c.req.param('id')
+  // Try Supabase first
+  try {
+    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const db = createSupabaseClient(c.env)
+      const leads = await db.select('hunting_leads', `id=eq.${id}`)
+      if (leads.length > 0) return c.json(leads[0])
+    }
+  } catch (_) {}
+  // In-memory fallback
+  const lead = liveScoutLeads.find(l => l.id === id)
   if (!lead) return c.json({ error: 'Lead not found' }, 404)
   return c.json(lead)
 })
 
-app.post('/api/leads', async (c) => {
-  const body = await c.req.json()
-  return c.json({ success: true, message: 'Lead created', data: { id: 'lead-new-' + Date.now(), ...body, created_at: new Date().toISOString() } }, 201)
-})
-
-app.get('/api/transactions', (c) => {
-  const totalPaid = dummyTransactions.filter(t => t.payment_status === 'paid').reduce((s, t) => s + t.amount_idr, 0)
-  return c.json({ data: dummyTransactions, total: dummyTransactions.length, summary: { total_revenue: totalPaid, total_paid: totalPaid, total_pending: 0 } })
-})
-
-app.get('/api/messages/:leadId', (c) => {
-  const msgs = dummyMessages.filter(m => m.lead_id === c.req.param('leadId'))
-  return c.json({ data: msgs, total: msgs.length })
-})
-
-app.get('/api/demos', (c) => {
-  return c.json({ data: dummyDemos, total: dummyDemos.length })
-})
-
-app.get('/api/agent-logs', (c) => {
-  return c.json({ data: dummyAgentLogs, total: dummyAgentLogs.length })
-})
-
-app.get('/api/treasury/stats', (c) => {
-  const totalRevenue = dummyTransactions.filter(t => t.payment_status === 'paid').reduce((s, t) => s + t.amount_idr, 0)
-  const pct = Math.round((totalRevenue / 7500000) * 100)
-  return c.json({
-    total_revenue_idr: totalRevenue,
-    total_revenue_usd: Math.round(totalRevenue / 15000 * 100) / 100,
-    target_idr: 7500000, target_usd: 500,
-    progress_percent: pct,
-    profit_split: { operational: Math.round(totalRevenue * 0.30), growth: Math.round(totalRevenue * 0.20), liquidity: Math.round(totalRevenue * 0.30), staking: Math.round(totalRevenue * 0.20) },
-    daily_revenue: [
-      { date: '2026-03-01', amount: 0 }, { date: '2026-03-02', amount: 0 },
-      { date: '2026-03-03', amount: 0 }, { date: '2026-03-04', amount: 0 },
-      { date: '2026-03-05', amount: 0 }, { date: '2026-03-06', amount: 200000 },
-      { date: '2026-03-07', amount: 0 }
-    ]
-  })
-})
-
 // ============================================================
-// API ROUTES - Phase 3: Scout Agent (The Hunter)
+// API ROUTES - Scout Agent (Single Hunt)
 // ============================================================
 
-// GET /api/scout/status - Scout agent status
 app.get('/api/scout/status', (c) => {
-  const status = getScoutStatus()
-  return c.json({
-    ...status,
-    cached_results: getLastHuntResults().length
-  })
+  return c.json({ ...getScoutStatus(), cached_results: getLastHuntResults().length })
 })
 
-// GET /api/scout/search - Execute scout search (SerpAPI + Groq AI)
 app.get('/api/scout/search', async (c) => {
   const area = c.req.query('area') || 'Jakarta Selatan'
   const category = c.req.query('category') || 'barber'
   const limit = Math.min(parseInt(c.req.query('limit') || '5'), 20)
+  const autoSave = c.req.query('auto_save') !== 'false' // default: auto-save to Supabase
 
-  // Check if already hunting
   const currentStatus = getScoutStatus()
   if (currentStatus.state === 'hunting' || currentStatus.state === 'scoring') {
-    return c.json({
-      error: 'Scout is already hunting! Wait for current hunt to complete.',
-      status: currentStatus
-    }, 429)
+    return c.json({ error: 'Scout busy', status: currentStatus }, 429)
   }
 
-  // Check API keys
   if (!c.env.SERPAPI_KEY || !c.env.GROQ_API_KEY) {
-    return c.json({
-      error: 'Missing API keys. Configure SERPAPI_KEY and GROQ_API_KEY in .dev.vars',
-      status: getScoutStatus()
-    }, 500)
+    return c.json({ error: 'Missing API keys' }, 500)
   }
+
+  const startTime = Date.now()
 
   try {
-    const results = await scoutWorkflow(
-      area,
-      category,
-      limit,
-      c.env.SERPAPI_KEY,
-      c.env.GROQ_API_KEY
-    )
+    const results = await scoutWorkflow(area, category, limit, c.env.SERPAPI_KEY, c.env.GROQ_API_KEY)
 
-    // Add to live scout leads (avoid duplicates by business name)
+    // Deduplicate against existing
     const existingNames = new Set(liveScoutLeads.map(l => l.business_name.toLowerCase()))
     const newLeads = results.filter(r => !existingNames.has(r.business_name.toLowerCase()))
     liveScoutLeads = [...liveScoutLeads, ...newLeads]
 
-    // Add agent log
-    dummyAgentLogs.unshift({
-      id: 'log-scout-' + Date.now(),
-      agent_type: 'scout',
-      action: `hunt_${category}_${area.replace(/\s+/g, '_')}`,
-      status: 'success',
-      execution_time_ms: 0,
-      details: `Found ${results.length} leads (${newLeads.length} new)`,
-      created_at: new Date().toISOString()
-    })
-
-    return c.json({
-      success: true,
-      area,
-      category,
-      results: results,
-      total: results.length,
-      new_leads: newLeads.length,
-      status: getScoutStatus()
-    })
-  } catch (error: any) {
-    // Add error log
-    dummyAgentLogs.unshift({
-      id: 'log-scout-err-' + Date.now(),
-      agent_type: 'scout',
-      action: `hunt_${category}_${area.replace(/\s+/g, '_')}`,
-      status: 'error',
-      execution_time_ms: 0,
-      details: error.message,
-      created_at: new Date().toISOString()
-    })
-
-    return c.json({
-      error: 'Scout hunt failed',
-      message: error.message,
-      status: getScoutStatus()
-    }, 500)
-  }
-})
-
-// POST /api/scout/score - Score a single business with Groq AI
-app.post('/api/scout/score', async (c) => {
-  if (!c.env.GROQ_API_KEY) {
-    return c.json({ error: 'Missing GROQ_API_KEY in .dev.vars' }, 500)
-  }
-
-  try {
-    const body = await c.req.json()
-    const { business, category } = body
-
-    if (!business || !business.title) {
-      return c.json({ error: 'Missing business data. Required: { business: { title, address, ... }, category: "..." }' }, 400)
+    // Auto-save to Supabase
+    let savedCount = 0
+    if (autoSave && newLeads.length > 0 && c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const db = createSupabaseClient(c.env)
+        const rows = newLeads.map(l => ({
+          business_name: l.business_name, category: l.category, address: l.address,
+          phone: l.phone, owner_name: l.owner_name, rating: l.rating,
+          review_count: l.review_count, website_url: l.website_url,
+          google_maps_url: l.google_maps_url, thumbnail: l.thumbnail,
+          ai_score: l.ai_score, digital_gap_score: l.digital_gap_score,
+          digital_gap_analysis: l.digital_gap_analysis,
+          recommended_approach: l.recommended_approach,
+          status: 'new', source: 'scout_agent'
+        }))
+        const saved = await db.insert('hunting_leads', rows)
+        savedCount = saved.length
+      } catch (saveErr: any) {
+        // Non-blocking save error
+        addLog('scout', 'auto_save_error', 'error', saveErr.message)
+      }
     }
 
-    const scoring = await scoreLeadWithAI(
-      business,
-      category || 'generic',
-      c.env.GROQ_API_KEY
-    )
+    addLog('scout', `hunt_${category}_${area.replace(/\s+/g, '_')}`, 'success',
+      `Found ${results.length} leads (${newLeads.length} new, ${savedCount} saved)`, Date.now() - startTime)
 
     return c.json({
-      success: true,
-      business_name: business.title,
-      scoring
+      success: true, area, category,
+      results, total: results.length,
+      new_leads: newLeads.length,
+      saved_to_db: savedCount,
+      status: getScoutStatus()
     })
   } catch (error: any) {
-    return c.json({
-      error: 'Scoring failed',
-      message: error.message
-    }, 500)
+    addLog('scout', `hunt_error`, 'error', error.message, Date.now() - startTime)
+    return c.json({ error: 'Hunt failed', message: error.message, status: getScoutStatus() }, 500)
   }
 })
 
-// GET /api/scout/results - Get cached results from last hunt
-app.get('/api/scout/results', (c) => {
-  const results = getLastHuntResults()
-  return c.json({
-    data: results,
-    total: results.length,
-    status: getScoutStatus()
-  })
+app.post('/api/scout/score', async (c) => {
+  if (!c.env.GROQ_API_KEY) return c.json({ error: 'Missing GROQ_API_KEY' }, 500)
+  try {
+    const { business, category } = await c.req.json()
+    if (!business?.title) return c.json({ error: 'Missing business data' }, 400)
+    const scoring = await scoreLeadWithAI(business, category || 'generic', c.env.GROQ_API_KEY)
+    return c.json({ success: true, business_name: business.title, scoring })
+  } catch (error: any) {
+    return c.json({ error: 'Scoring failed', message: error.message }, 500)
+  }
 })
 
-// DELETE /api/scout/results - Clear cached scout results
+app.get('/api/scout/results', (c) => {
+  return c.json({ data: getLastHuntResults(), total: getLastHuntResults().length, status: getScoutStatus() })
+})
+
 app.delete('/api/scout/results', (c) => {
   liveScoutLeads = []
   return c.json({ success: true, message: 'Scout results cleared' })
+})
+
+// ============================================================
+// API ROUTES - Bulk Hunter (Session 004)
+// ============================================================
+
+// GET /api/bulk/config - Get available cities and categories
+app.get('/api/bulk/config', (c) => {
+  return c.json({
+    available_cities: DEFAULT_HUNT_CITIES,
+    available_categories: DEFAULT_HUNT_CATEGORIES,
+    max_cities: 15,
+    max_categories: 10,
+    max_limit_per_hunt: 5,
+    recommended: {
+      cities: ['Jakarta Selatan', 'Bandung', 'Surabaya', 'Yogyakarta', 'Bali Denpasar'],
+      categories: ['barber shop', 'salon kecantikan', 'cafe'],
+      limit: 3
+    }
+  })
+})
+
+// GET /api/bulk/status - Get bulk hunt status
+app.get('/api/bulk/status', (c) => {
+  const status = getBulkHuntStatus()
+  if (!status) return c.json({ status: 'idle', message: 'No bulk hunt running' })
+  return c.json(status)
+})
+
+// POST /api/bulk/hunt - Start bulk hunt
+app.post('/api/bulk/hunt', async (c) => {
+  if (!c.env.SERPAPI_KEY || !c.env.GROQ_API_KEY) {
+    return c.json({ error: 'Missing API keys (SERPAPI_KEY, GROQ_API_KEY)' }, 500)
+  }
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Missing Supabase credentials for auto-save' }, 500)
+  }
+
+  const current = getBulkHuntStatus()
+  if (current?.status === 'running') {
+    return c.json({ error: 'Bulk hunt already running!', status: current }, 429)
+  }
+
+  const body = await c.req.json().catch(() => ({}))
+  const mission: HuntMission = {
+    cities: body.cities || ['Jakarta Selatan', 'Bandung', 'Surabaya'],
+    categories: body.categories || ['barber shop', 'cafe', 'salon kecantikan'],
+    limit_per_hunt: Math.min(body.limit || 3, 5)
+  }
+
+  addLog('bulk_hunter', 'bulk_hunt_start', 'success',
+    `Starting: ${mission.cities.length} cities x ${mission.categories.length} categories`)
+
+  const startTime = Date.now()
+
+  try {
+    const result = await bulkHuntWorkflow(
+      mission,
+      c.env.SERPAPI_KEY,
+      c.env.GROQ_API_KEY,
+      c.env.SUPABASE_URL,
+      c.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+
+    // Add new leads to in-memory store too
+    const existingNames = new Set(liveScoutLeads.map(l => l.business_name.toLowerCase()))
+    const newLeads = result.all_leads.filter(l => !existingNames.has(l.business_name.toLowerCase()))
+    liveScoutLeads = [...liveScoutLeads, ...newLeads]
+
+    addLog('bulk_hunter', 'bulk_hunt_complete', 'success',
+      `Done! ${result.total_leads} leads found, ${result.total_saved} saved to DB. ${result.errors.length} errors.`,
+      Date.now() - startTime)
+
+    return c.json({
+      success: true,
+      summary: {
+        total_leads: result.total_leads,
+        total_saved: result.total_saved,
+        cities_completed: result.cities_completed,
+        hunts_completed: result.hunts_completed,
+        errors: result.errors.length,
+        duration_ms: Date.now() - startTime
+      },
+      results_by_city: result.results_by_city,
+      top_leads: result.all_leads.slice(0, 10).map(l => ({
+        name: l.business_name, city: l.address, category: l.category,
+        score: l.ai_score, gap: l.digital_gap_score
+      })),
+      errors: result.errors
+    })
+  } catch (error: any) {
+    addLog('bulk_hunter', 'bulk_hunt_error', 'error', error.message, Date.now() - startTime)
+    return c.json({ error: 'Bulk hunt failed', message: error.message }, 500)
+  }
+})
+
+// ============================================================
+// API ROUTES - Closer Agent / WhatsApp (Session 004)
+// ============================================================
+
+// POST /api/closer/generate - Generate WA message for a lead
+app.post('/api/closer/generate', async (c) => {
+  const body = await c.req.json()
+  const { lead_id, message_type, use_ai } = body
+
+  // Find lead from Supabase or in-memory
+  let lead: any = null
+  try {
+    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const db = createSupabaseClient(c.env)
+      const results = await db.select('hunting_leads', `id=eq.${lead_id}`)
+      if (results.length > 0) {
+        lead = results[0]
+        // Map DB fields to ScoredLead format
+        lead.id = String(lead.id)
+      }
+    }
+  } catch (_) {}
+
+  if (!lead) {
+    lead = liveScoutLeads.find(l => l.id === lead_id)
+  }
+
+  if (!lead) {
+    return c.json({ error: 'Lead not found' }, 404)
+  }
+
+  let message: WAMessage
+
+  if (use_ai && c.env.GROQ_API_KEY) {
+    message = await generateAIMessage(lead as ScoredLead, message_type || 'initial', c.env.GROQ_API_KEY)
+    addLog('closer', 'ai_message_generated', 'success', `AI message for ${lead.business_name}`)
+  } else {
+    message = generateWAMessage(lead as ScoredLead, message_type || 'initial')
+    addLog('closer', 'template_message_generated', 'success', `Template message for ${lead.business_name}`)
+  }
+
+  generatedMessages.push(message)
+  return c.json({ success: true, message })
+})
+
+// POST /api/closer/batch - Generate messages for multiple leads
+app.post('/api/closer/batch', async (c) => {
+  const body = await c.req.json()
+  const { min_score, category, message_type, limit: msgLimit } = body
+
+  // Get leads from Supabase
+  let leads: any[] = []
+  try {
+    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const db = createSupabaseClient(c.env)
+      let query = `order=ai_score.desc&limit=${msgLimit || 20}&status=eq.new`
+      if (min_score) query += `&ai_score=gte.${min_score}`
+      if (category) query += `&category=eq.${category}`
+      leads = await db.select('hunting_leads', query)
+    }
+  } catch (_) {}
+
+  if (leads.length === 0) {
+    leads = liveScoutLeads.filter(l => l.ai_score >= (min_score || 60))
+  }
+
+  if (leads.length === 0) {
+    return c.json({ error: 'No leads found matching criteria' }, 404)
+  }
+
+  const messages = batchGenerateMessages(leads as ScoredLead[], message_type || 'initial')
+  generatedMessages = [...generatedMessages, ...messages]
+
+  addLog('closer', 'batch_messages', 'success', `Generated ${messages.length} messages for ${leads.length} leads`)
+
+  return c.json({
+    success: true,
+    generated: messages.length,
+    messages: messages
+  })
+})
+
+// GET /api/closer/messages - Get all generated messages
+app.get('/api/closer/messages', (c) => {
+  return c.json({
+    data: generatedMessages,
+    total: generatedMessages.length
+  })
+})
+
+// DELETE /api/closer/messages - Clear generated messages
+app.delete('/api/closer/messages', (c) => {
+  generatedMessages = []
+  return c.json({ success: true, message: 'Messages cleared' })
+})
+
+// ============================================================
+// API ROUTES - Agent Logs
+// ============================================================
+
+app.get('/api/agent-logs', (c) => {
+  const limit = parseInt(c.req.query('limit') || '20')
+  const agentType = c.req.query('agent')
+  let filtered = agentType ? agentLogs.filter(l => l.agent_type === agentType) : agentLogs
+  return c.json({ data: filtered.slice(0, limit), total: filtered.length })
+})
+
+// ============================================================
+// API ROUTES - Treasury
+// ============================================================
+
+app.get('/api/treasury/stats', (c) => {
+  return c.json({
+    total_revenue_idr: 0,
+    total_revenue_usd: 0,
+    target_idr: 7500000,
+    target_usd: 500,
+    progress_percent: 0,
+    profit_split: { operational: 0, growth: 0, liquidity: 0, staking: 0 },
+    note: 'Revenue tracking starts when first deal closes. Focus: Hunt → Contact → Close!'
+  })
+})
+
+app.get('/api/transactions', (c) => {
+  return c.json({ data: [], total: 0, summary: { total_revenue: 0, total_paid: 0, total_pending: 0 } })
+})
+
+// ============================================================
+// API ROUTES - Reports
+// ============================================================
+
+app.get('/api/reports/hunt-summary', async (c) => {
+  let dbLeads: any[] = []
+  try {
+    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const db = createSupabaseClient(c.env)
+      dbLeads = await db.select('hunting_leads', 'select=id,business_name,category,address,ai_score,digital_gap_score,status,source,created_at&order=ai_score.desc')
+    }
+  } catch (_) {}
+
+  // Category breakdown
+  const byCategory: Record<string, { count: number; avg_score: number; top_lead: string }> = {}
+  for (const l of dbLeads) {
+    if (!byCategory[l.category]) {
+      byCategory[l.category] = { count: 0, avg_score: 0, top_lead: '' }
+    }
+    byCategory[l.category].count++
+    byCategory[l.category].avg_score += l.ai_score
+    if (!byCategory[l.category].top_lead || l.ai_score > 80) {
+      byCategory[l.category].top_lead = l.business_name
+    }
+  }
+  for (const cat in byCategory) {
+    byCategory[cat].avg_score = Math.round(byCategory[cat].avg_score / byCategory[cat].count)
+  }
+
+  return c.json({
+    total_leads: dbLeads.length,
+    hot_leads: dbLeads.filter(l => l.ai_score >= 80).length,
+    warm_leads: dbLeads.filter(l => l.ai_score >= 60 && l.ai_score < 80).length,
+    cold_leads: dbLeads.filter(l => l.ai_score < 60).length,
+    by_category: byCategory,
+    top_10: dbLeads.slice(0, 10).map(l => ({
+      name: l.business_name, category: l.category,
+      score: l.ai_score, gap: l.digital_gap_score, city: l.address
+    })),
+    messages_generated: generatedMessages.length,
+    generated_at: new Date().toISOString()
+  })
 })
 
 // ============================================================
