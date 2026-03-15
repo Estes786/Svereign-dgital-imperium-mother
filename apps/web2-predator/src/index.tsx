@@ -23,6 +23,15 @@ import {
   batchGenerateMessages,
   type WAMessage
 } from './agents/closer'
+import {
+  generateWebsite,
+  getDemo,
+  trackView,
+  updateDemoStatus,
+  listDemos,
+  getTemplates,
+  type DemoSite
+} from './agents/architect'
 import { createSupabaseClient } from './lib/supabase'
 
 type Bindings = {
@@ -73,24 +82,28 @@ function getAllScoutLeads() {
 app.get('/api/health', (c) => {
   const scout = getScoutStatus()
   const bulk = getBulkHuntStatus()
+  const demos = listDemos()
   return c.json({
     status: 'online',
     engine: 'sovereign-predator',
-    version: '4.0.0',
-    phase: 4,
-    session: '004',
+    version: '5.0.0',
+    phase: 5,
+    session: '005',
     agents: {
       scout: scout.state,
       bulk_hunter: bulk?.status || 'idle',
       closer: generatedMessages.length > 0 ? 'active' : 'idle',
-      architect: 'idle',
+      architect: demos.length > 0 ? 'active' : 'ready',
       harvester: 'idle',
       orchestrator: 'idle'
     },
     capabilities: [
       'single_hunt', 'bulk_hunt', 'ai_scoring',
-      'supabase_storage', 'wa_closer', 'ai_messages'
+      'supabase_storage', 'wa_closer', 'ai_messages',
+      'ghost_web_builder', 'demo_hosting', '5_templates'
     ],
+    templates: getTemplates().map(t => t.id),
+    demos_active: demos.length,
     timestamp: new Date().toISOString()
   })
 })
@@ -115,12 +128,14 @@ app.get('/api/stats', async (c) => {
   const totalLeads = dbLeadCount || liveScoutLeads.length
   const hotLeads = dbHighScoreCount || liveScoutLeads.filter(l => l.ai_score >= 80).length
 
+  const allDemos = listDemos()
   return c.json({
     leads: totalLeads,
     hot_leads: hotLeads,
     contacted: 0,
     conversions: 0,
-    demos_deployed: 0,
+    demos_deployed: allDemos.length,
+    demos_viewed: allDemos.filter(d => d.views > 0).length,
     messages_generated: generatedMessages.length,
     revenue: 0,
     revenue_formatted: 'Rp 0',
@@ -658,6 +673,270 @@ app.get('/api/treasury/stats', (c) => {
 
 app.get('/api/transactions', (c) => {
   return c.json({ data: [], total: 0, summary: { total_revenue: 0, total_paid: 0, total_pending: 0 } })
+})
+
+// ============================================================
+// API ROUTES - Architect Agent / Ghost Web Builder (Session 005)
+// ============================================================
+
+// GET /api/architect/templates - List available templates
+app.get('/api/architect/templates', (c) => {
+  return c.json({ templates: getTemplates() })
+})
+
+// POST /api/architect/generate - Generate a demo website for a lead
+app.post('/api/architect/generate', async (c) => {
+  const body = await c.req.json()
+  const { lead_id, template } = body
+
+  // Find lead from Supabase or in-memory
+  let lead: any = null
+  try {
+    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const db = createSupabaseClient(c.env)
+      const results = await db.select('hunting_leads', `id=eq.${lead_id}`)
+      if (results.length > 0) lead = results[0]
+    }
+  } catch (_) {}
+
+  if (!lead) {
+    lead = liveScoutLeads.find(l => l.id === String(lead_id))
+  }
+
+  if (!lead) {
+    return c.json({ error: 'Lead not found', lead_id }, 404)
+  }
+
+  const startTime = Date.now()
+
+  try {
+    const demo = generateWebsite({
+      id: lead.id,
+      business_name: lead.business_name,
+      category: lead.category,
+      address: lead.address || '',
+      phone: lead.phone || '',
+      rating: lead.rating || 4.0,
+      review_count: lead.review_count || 0,
+      website_url: lead.website_url,
+      google_maps_url: lead.google_maps_url,
+      thumbnail: lead.thumbnail
+    }, template)
+
+    // Save demo to Supabase
+    let dbSaved = false
+    try {
+      if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+        const db = createSupabaseClient(c.env)
+        await db.insert('demo_sites', [{
+          demo_id: demo.id,
+          lead_id: lead.id,
+          business_name: demo.business_name,
+          category: demo.category,
+          template_type: demo.template_type,
+          status: 'active',
+          views: 0
+        }])
+        dbSaved = true
+      }
+    } catch (_) {}
+
+    addLog('architect', 'generate_website', 'success',
+      `${demo.business_name} → ${demo.template_type} template (${Date.now() - startTime}ms)`, Date.now() - startTime)
+
+    return c.json({
+      success: true,
+      demo: {
+        id: demo.id,
+        business_name: demo.business_name,
+        category: demo.category,
+        template_type: demo.template_type,
+        preview_url: `/demo/${demo.id}`,
+        created_at: demo.created_at,
+        saved_to_db: dbSaved
+      },
+      generation_time_ms: Date.now() - startTime
+    })
+  } catch (error: any) {
+    addLog('architect', 'generate_error', 'error', error.message, Date.now() - startTime)
+    return c.json({ error: 'Generation failed', message: error.message }, 500)
+  }
+})
+
+// POST /api/architect/generate-from-data - Generate website from custom data (no lead lookup)
+app.post('/api/architect/generate-from-data', (c) => {
+  return (async () => {
+    const body = await c.req.json()
+    const { business_name, category, address, phone, rating, review_count, template } = body
+
+    if (!business_name) return c.json({ error: 'Missing business_name' }, 400)
+
+    const startTime = Date.now()
+
+    const demo = generateWebsite({
+      id: `custom-${Date.now()}`,
+      business_name,
+      category: category || 'generic',
+      address: address || '',
+      phone: phone || '',
+      rating: rating || 4.5,
+      review_count: review_count || 0,
+    }, template)
+
+    addLog('architect', 'generate_custom', 'success',
+      `Custom: ${business_name} → ${demo.template_type}`, Date.now() - startTime)
+
+    return c.json({
+      success: true,
+      demo: {
+        id: demo.id,
+        business_name: demo.business_name,
+        template_type: demo.template_type,
+        preview_url: `/demo/${demo.id}`,
+        created_at: demo.created_at
+      },
+      generation_time_ms: Date.now() - startTime
+    })
+  })()
+})
+
+// POST /api/architect/batch-generate - Generate demos for multiple leads
+app.post('/api/architect/batch-generate', async (c) => {
+  const body = await c.req.json()
+  const { min_score, category: filterCat, limit: maxLimit, template: tplOverride } = body
+
+  let leads: any[] = []
+  try {
+    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const db = createSupabaseClient(c.env)
+      let query = `order=ai_score.desc&limit=${maxLimit || 10}&status=eq.new`
+      if (min_score) query += `&ai_score=gte.${min_score}`
+      if (filterCat) query += `&category=eq.${filterCat}`
+      leads = await db.select('hunting_leads', query)
+    }
+  } catch (_) {}
+
+  if (leads.length === 0) {
+    leads = liveScoutLeads
+      .filter(l => l.ai_score >= (min_score || 60))
+      .slice(0, maxLimit || 10)
+  }
+
+  if (leads.length === 0) {
+    return c.json({ error: 'No leads found' }, 404)
+  }
+
+  const startTime = Date.now()
+  const generated: any[] = []
+
+  for (const lead of leads) {
+    try {
+      const demo = generateWebsite({
+        id: lead.id,
+        business_name: lead.business_name,
+        category: lead.category,
+        address: lead.address || '',
+        phone: lead.phone || '',
+        rating: lead.rating || 4.0,
+        review_count: lead.review_count || 0,
+        website_url: lead.website_url,
+        google_maps_url: lead.google_maps_url,
+        thumbnail: lead.thumbnail
+      }, tplOverride)
+
+      generated.push({
+        id: demo.id,
+        business_name: demo.business_name,
+        template_type: demo.template_type,
+        preview_url: `/demo/${demo.id}`
+      })
+    } catch (e) {}
+  }
+
+  addLog('architect', 'batch_generate', 'success',
+    `Generated ${generated.length} demos from ${leads.length} leads`, Date.now() - startTime)
+
+  return c.json({
+    success: true,
+    total: generated.length,
+    demos: generated,
+    generation_time_ms: Date.now() - startTime
+  })
+})
+
+// GET /api/architect/demos - List all generated demos
+app.get('/api/architect/demos', (c) => {
+  const demos = listDemos()
+  return c.json({
+    data: demos.map(d => ({
+      id: d.id,
+      lead_id: d.lead_id,
+      business_name: d.business_name,
+      category: d.category,
+      template_type: d.template_type,
+      preview_url: `/demo/${d.id}`,
+      views: d.views,
+      status: d.status,
+      created_at: d.created_at
+    })),
+    total: demos.length
+  })
+})
+
+// GET /api/architect/demos/:id - Get demo details
+app.get('/api/architect/demos/:id', (c) => {
+  const id = c.req.param('id')
+  const demo = getDemo(id)
+  if (!demo) return c.json({ error: 'Demo not found' }, 404)
+  return c.json({
+    id: demo.id,
+    lead_id: demo.lead_id,
+    business_name: demo.business_name,
+    category: demo.category,
+    template_type: demo.template_type,
+    preview_url: `/demo/${demo.id}`,
+    views: demo.views,
+    status: demo.status,
+    created_at: demo.created_at
+  })
+})
+
+// PATCH /api/architect/demos/:id - Update demo status
+app.patch('/api/architect/demos/:id', async (c) => {
+  const id = c.req.param('id')
+  const body = await c.req.json()
+  if (body.status) {
+    const ok = updateDemoStatus(id, body.status)
+    if (!ok) return c.json({ error: 'Demo not found' }, 404)
+    addLog('architect', 'demo_status_update', 'success', `${id} → ${body.status}`)
+    return c.json({ success: true })
+  }
+  return c.json({ error: 'No status provided' }, 400)
+})
+
+// ============================================================
+// DEMO SITE SERVING — /demo/:id serves the generated HTML
+// ============================================================
+
+app.get('/demo/:id', (c) => {
+  const id = c.req.param('id')
+  const demo = getDemo(id)
+  if (!demo) {
+    return c.html(`<!DOCTYPE html><html><head><title>Demo Not Found</title>
+      <script src="https://cdn.tailwindcss.com"></script></head>
+      <body class="bg-black text-white min-h-screen flex items-center justify-center">
+        <div class="text-center"><div class="text-6xl mb-4">🔍</div>
+        <h1 class="text-2xl font-bold mb-2">Demo Not Found</h1>
+        <p class="text-white/50">ID: ${id}</p>
+        <a href="/dashboard#builder" class="mt-4 inline-block text-gold underline">← Back to Dashboard</a>
+        </div></body></html>`, 404)
+  }
+
+  // Track view
+  trackView(id)
+  addLog('architect', 'demo_viewed', 'success', `${demo.business_name} (${id}) — views: ${demo.views}`)
+
+  return c.html(demo.html)
 })
 
 // ============================================================

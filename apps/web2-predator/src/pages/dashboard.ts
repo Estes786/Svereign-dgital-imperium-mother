@@ -3,7 +3,7 @@ export const dashboardHTML = `<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PREDATOR v4.0 | Sovereign Predator Suite</title>
+    <title>PREDATOR v5.0 | Sovereign Predator Suite</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👹</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -70,7 +70,7 @@ export const dashboardHTML = `<!DOCTYPE html>
             <div class="flex items-center gap-2">
                 <a href="/" class="text-xl">👹</a>
                 <span class="font-display font-black text-gold text-sm tracking-wider">PREDATOR</span>
-                <span class="text-[9px] font-mono text-neon glass px-1.5 py-0.5 rounded">v4.0</span>
+                <span class="text-[9px] font-mono text-neon glass px-1.5 py-0.5 rounded">v5.0</span>
             </div>
             <div class="flex items-center gap-2">
                 <div id="db-count" class="text-[9px] font-mono text-gold/60 mr-1"></div>
@@ -86,7 +86,7 @@ export const dashboardHTML = `<!DOCTYPE html>
 
         <!-- ===================== TAB: PREDATOR ===================== -->
         <div id="tab-predator" class="tab-content active">
-            <div class="mb-4 slide-up"><h2 class="font-display font-black text-xl text-gold mb-0.5">COMMAND CENTER</h2><p class="text-[10px] text-white/40 font-mono">// Session 004 — Bulk Hunter + Closer Agent LIVE</p></div>
+            <div class="mb-4 slide-up"><h2 class="font-display font-black text-xl text-gold mb-0.5">COMMAND CENTER</h2><p class="text-[10px] text-white/40 font-mono">// Session 005 — Ghost Web Builder (Architect) LIVE</p></div>
 
             <!-- Scout Banner -->
             <div id="scout-banner" class="glass-gold rounded-2xl p-3 mb-4 slide-up flex items-center gap-3" style="animation-delay:.05s">
@@ -169,7 +169,7 @@ export const dashboardHTML = `<!DOCTYPE html>
                     <div class="flex items-center justify-between glass rounded-xl px-3 py-2.5"><div class="flex items-center gap-2"><i class="fas fa-crosshairs text-gold text-sm"></i><span class="text-xs">Scout (Hunter)</span></div><div class="flex items-center gap-1.5" id="crew-scout"><div class="w-2 h-2 bg-neon rounded-full animate-pulse"></div><span class="text-[10px] font-mono text-neon font-bold">READY</span></div></div>
                     <div class="flex items-center justify-between glass rounded-xl px-3 py-2.5"><div class="flex items-center gap-2"><i class="fas fa-bomb text-neon text-sm"></i><span class="text-xs">Bulk Hunter</span></div><div class="flex items-center gap-1.5" id="crew-bulk"><div class="w-2 h-2 bg-neon rounded-full animate-pulse"></div><span class="text-[10px] font-mono text-neon font-bold">READY</span></div></div>
                     <div class="flex items-center justify-between glass rounded-xl px-3 py-2.5"><div class="flex items-center gap-2"><i class="fab fa-whatsapp text-green-400 text-sm"></i><span class="text-xs">Closer (WA)</span></div><div class="flex items-center gap-1.5" id="crew-closer"><div class="w-2 h-2 bg-neon rounded-full animate-pulse"></div><span class="text-[10px] font-mono text-neon font-bold">READY</span></div></div>
-                    <div class="flex items-center justify-between glass rounded-xl px-3 py-2.5"><div class="flex items-center gap-2"><i class="fas fa-code text-purple-400 text-sm"></i><span class="text-xs">Architect (Builder)</span></div><div class="flex items-center gap-1.5"><div class="w-2 h-2 bg-white/20 rounded-full"></div><span class="text-[10px] font-mono text-white/40">PHASE 5</span></div></div>
+                    <div class="flex items-center justify-between glass rounded-xl px-3 py-2.5"><div class="flex items-center gap-2"><i class="fas fa-code text-purple-400 text-sm"></i><span class="text-xs">Architect (Builder)</span></div><div class="flex items-center gap-1.5" id="crew-architect"><div class="w-2 h-2 bg-neon rounded-full animate-pulse"></div><span class="text-[10px] font-mono text-neon font-bold">READY</span></div></div>
                     <div class="flex items-center justify-between glass rounded-xl px-3 py-2.5"><div class="flex items-center gap-2"><i class="fas fa-coins text-gold text-sm"></i><span class="text-xs">Harvester ($$)</span></div><div class="flex items-center gap-1.5"><div class="w-2 h-2 bg-white/20 rounded-full"></div><span class="text-[10px] font-mono text-white/40">PHASE 6</span></div></div>
                 </div>
             </div>
@@ -239,6 +239,71 @@ export const dashboardHTML = `<!DOCTYPE html>
             </div>
         </div>
 
+        <!-- ===================== TAB: BUILDER ===================== -->
+        <div id="tab-builder" class="tab-content">
+            <div class="mb-4"><h2 class="font-display font-black text-xl text-purple-400 mb-0.5">GHOST WEB BUILDER</h2><p class="text-[10px] text-white/40 font-mono">// Architect Agent — Generate UMKM landing pages in 60s</p></div>
+
+            <!-- Template Picker -->
+            <div class="glass rounded-2xl p-4 mb-4">
+                <h3 class="font-display font-bold text-xs text-white mb-3"><i class="fas fa-palette text-purple-400 mr-2"></i>SELECT TEMPLATE</h3>
+                <div class="grid grid-cols-5 gap-2 mb-3" id="tpl-picker"></div>
+                <div id="tpl-selected" class="text-center text-[10px] font-mono text-white/40">Select a template above</div>
+            </div>
+
+            <!-- Generate from Lead -->
+            <div class="glass-blue rounded-2xl p-4 mb-4">
+                <h3 class="font-display font-bold text-xs text-white mb-3"><i class="fas fa-magic text-purple-400 mr-2"></i>GENERATE FROM LEAD</h3>
+                <div class="mb-3">
+                    <label class="text-[9px] font-mono text-white/40 block mb-1">SELECT LEAD (from DB)</label>
+                    <select id="build-lead-select" class="w-full border border-purple-400/20 rounded-xl px-3 py-2 text-xs focus:border-purple-400 focus:outline-none">
+                        <option value="">Loading leads...</option>
+                    </select>
+                </div>
+                <button id="btn-generate-lead" class="w-full bg-purple-500/10 border-2 border-purple-400 text-purple-400 py-3 rounded-2xl font-display font-black text-sm hover:bg-purple-500/20 transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-bolt"></i>GENERATE WEBSITE<i class="fas fa-rocket"></i>
+                </button>
+                <p class="text-center text-[8px] font-mono text-white/20 mt-1">Auto-detects category → picks best template → generates in &lt;1s</p>
+            </div>
+
+            <!-- Generate Custom -->
+            <div class="glass rounded-2xl p-4 mb-4">
+                <h3 class="font-display font-bold text-xs text-white mb-3"><i class="fas fa-pen-nib text-purple-400 mr-2"></i>CUSTOM BUILD</h3>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <div><label class="text-[9px] font-mono text-white/40 block mb-1">BUSINESS NAME</label><input type="text" id="custom-name" placeholder="e.g. Bosshead Barbershop" class="w-full border border-white/10 rounded-xl px-3 py-2 text-xs focus:border-purple-400 focus:outline-none"></div>
+                    <div><label class="text-[9px] font-mono text-white/40 block mb-1">PHONE</label><input type="text" id="custom-phone" placeholder="0812xxx" class="w-full border border-white/10 rounded-xl px-3 py-2 text-xs focus:border-purple-400 focus:outline-none"></div>
+                </div>
+                <div class="mb-2"><label class="text-[9px] font-mono text-white/40 block mb-1">ADDRESS</label><input type="text" id="custom-address" placeholder="Jl. Raya No.123, Jakarta" class="w-full border border-white/10 rounded-xl px-3 py-2 text-xs focus:border-purple-400 focus:outline-none"></div>
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <div><label class="text-[9px] font-mono text-white/40 block mb-1">RATING</label><input type="number" id="custom-rating" value="4.5" min="1" max="5" step="0.1" class="w-full border border-white/10 rounded-xl px-3 py-2 text-xs focus:border-purple-400 focus:outline-none text-center"></div>
+                    <div><label class="text-[9px] font-mono text-white/40 block mb-1">REVIEWS</label><input type="number" id="custom-reviews" value="100" min="0" class="w-full border border-white/10 rounded-xl px-3 py-2 text-xs focus:border-purple-400 focus:outline-none text-center"></div>
+                </div>
+                <button id="btn-generate-custom" class="w-full glass-gold py-2.5 rounded-2xl font-display font-bold text-xs text-gold flex items-center justify-center gap-2 hover:bg-gold/10 transition-all">
+                    <i class="fas fa-wand-magic-sparkles"></i>BUILD CUSTOM SITE
+                </button>
+            </div>
+
+            <!-- Batch Generate -->
+            <div class="glass-neon rounded-2xl p-4 mb-4">
+                <h3 class="font-display font-bold text-xs text-white mb-3"><i class="fas fa-layer-group text-neon mr-2"></i>BATCH GENERATE</h3>
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <div><label class="text-[9px] font-mono text-white/40 block mb-1">MIN SCORE</label><input type="number" id="batch-build-score" value="60" min="0" max="100" class="w-full border border-neon/20 rounded-xl px-3 py-2 text-xs focus:border-neon focus:outline-none text-center"></div>
+                    <div><label class="text-[9px] font-mono text-white/40 block mb-1">MAX LEADS</label><input type="number" id="batch-build-limit" value="5" min="1" max="20" class="w-full border border-neon/20 rounded-xl px-3 py-2 text-xs focus:border-neon focus:outline-none text-center"></div>
+                </div>
+                <button id="btn-batch-build" class="w-full bg-neon/10 border-2 border-neon text-neon py-3 rounded-2xl font-display font-black text-sm hover:bg-neon/20 transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-layer-group"></i>BATCH BUILD ALL<i class="fas fa-bolt"></i>
+                </button>
+            </div>
+
+            <!-- Demo Gallery -->
+            <div class="glass rounded-2xl p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-display font-bold text-xs text-white"><i class="fas fa-globe text-purple-400 mr-2"></i>GENERATED DEMOS</h3>
+                    <span class="text-[9px] font-mono text-white/30" id="demo-count">0 demos</span>
+                </div>
+                <div id="demos-container" class="space-y-3"></div>
+            </div>
+        </div>
+
         <!-- ===================== TAB: TREASURY ===================== -->
         <div id="tab-treasury" class="tab-content">
             <div class="mb-4"><h2 class="font-display font-black text-xl text-gold mb-0.5">TREASURY</h2><p class="text-[10px] text-white/40 font-mono">// Revenue tracking — Target $500 / Rp 7.5M</p></div>
@@ -264,7 +329,8 @@ export const dashboardHTML = `<!DOCTYPE html>
             <button onclick="switchTab('predator')" class="tab-btn flex flex-col items-center gap-0.5 px-3 py-1 text-gold" data-tab="predator"><i class="fas fa-crosshairs text-lg"></i><span class="text-[8px] font-display font-bold">HUNT</span></button>
             <button onclick="switchTab('leads')" class="tab-btn flex flex-col items-center gap-0.5 px-3 py-1 text-white/40" data-tab="leads"><i class="fas fa-database text-lg"></i><span class="text-[8px] font-display font-bold">LEADS</span></button>
             <button onclick="switchTab('closer')" class="tab-btn flex flex-col items-center gap-0.5 px-3 py-1 text-white/40" data-tab="closer"><i class="fab fa-whatsapp text-lg"></i><span class="text-[8px] font-display font-bold">CLOSER</span></button>
-            <button onclick="switchTab('treasury')" class="tab-btn flex flex-col items-center gap-0.5 px-3 py-1 text-white/40" data-tab="treasury"><i class="fas fa-coins text-lg"></i><span class="text-[8px] font-display font-bold">TREASURY</span></button>
+            <button onclick="switchTab('builder')" class="tab-btn flex flex-col items-center gap-0.5 px-3 py-1 text-white/40" data-tab="builder"><i class="fas fa-code text-lg"></i><span class="text-[8px] font-display font-bold">BUILD</span></button>
+            <button onclick="switchTab('treasury')" class="tab-btn flex flex-col items-center gap-0.5 px-3 py-1 text-white/40" data-tab="treasury"><i class="fas fa-coins text-lg"></i><span class="text-[8px] font-display font-bold">$$</span></button>
         </div>
     </nav>
 
@@ -274,6 +340,8 @@ export const dashboardHTML = `<!DOCTYPE html>
     let leadSource='db';
     let selectedBulkCities=new Set(['Jakarta Selatan','Bandung','Surabaya']);
     let selectedBulkCats=new Set(['barber shop','cafe','salon kecantikan']);
+    let selectedTemplate=null;
+    let builderLeads=[];
 
     const CITIES=['Jakarta Selatan','Jakarta Pusat','Jakarta Barat','Bandung','Surabaya','Yogyakarta','Semarang','Malang','Bali Denpasar','Medan','Makassar','Bekasi','Tangerang','Depok','Bogor'];
     const CATS=['barber shop','salon kecantikan','cafe','restoran','bengkel mobil','klinik gigi','gym fitness','laundry','toko bunga','pet shop'];
@@ -287,6 +355,7 @@ export const dashboardHTML = `<!DOCTYPE html>
         history.replaceState(null,null,'#'+t);
         if(t==='leads')loadLeads();
         if(t==='closer')loadWAMessages();
+        if(t==='builder'){loadBuilderLeads();loadDemos()}
         if(t==='treasury')loadTreasury();
     }
 
@@ -521,6 +590,7 @@ export const dashboardHTML = `<!DOCTYPE html>
                 '<div class="flex gap-2">'+
                     '<button onclick="generateWAForLead('+l.id+',\\''+escHtml(l.business_name)+'\\')" class="flex-1 bg-green-500/10 border border-green-400 py-2 rounded-xl text-[10px] font-display font-bold text-green-400 hover:bg-green-500/20 transition-all flex items-center justify-center gap-1"><i class="fab fa-whatsapp"></i>WA Message</button>'+
                     (l.phone&&l.phone!=='unknown'&&l.phone!=='+62-unknown'?'<a href="https://wa.me/'+cleanPhone(l.phone)+'" target="_blank" class="flex-1 bg-neon/10 border border-neon py-2 rounded-xl text-[10px] font-display font-bold text-neon hover:bg-neon/20 transition-all flex items-center justify-center gap-1"><i class="fab fa-whatsapp"></i>Direct WA</a>':'<button class="flex-1 glass py-2 rounded-xl text-[10px] font-display font-bold text-white/30 flex items-center justify-center gap-1" disabled><i class="fas fa-phone-slash"></i>No Phone</button>')+
+                    '<button onclick="quickBuildDemo('+l.id+',\\''+escHtml(l.business_name)+'\\')" class="flex-1 bg-purple-500/10 border border-purple-400 py-2 rounded-xl text-[10px] font-display font-bold text-purple-400 hover:bg-purple-500/20 transition-all flex items-center justify-center gap-1"><i class="fas fa-code"></i>Build</button>'+
                 '</div>'+
             '</div>'}).join('');
         }catch(e){console.error('Leads error:',e)}
@@ -612,6 +682,144 @@ export const dashboardHTML = `<!DOCTYPE html>
         }catch(e){console.error(e)}
     }
 
+    // ===================== BUILDER / ARCHITECT =====================
+    async function loadTemplates(){
+        try{
+            const r=await fetch('/api/architect/templates');const d=await r.json();
+            const picker=document.getElementById('tpl-picker');
+            if(!picker)return;
+            picker.innerHTML=d.templates.map(t=>'<button onclick="selectTemplate(\\''+t.id+'\\')" class="tpl-btn flex flex-col items-center gap-1 p-2 rounded-xl border transition-all '+(selectedTemplate===t.id?'border-purple-400 bg-purple-500/10':'border-white/10 glass hover:border-purple-400/50')+'" data-tpl="'+t.id+'">'+
+                '<span class="text-xl">'+t.emoji+'</span>'+
+                '<span class="text-[8px] font-display font-bold text-white/70">'+t.name.split(' ')[0]+'</span>'+
+            '</button>').join('');
+        }catch(e){}
+    }
+    function selectTemplate(tpl){
+        selectedTemplate=tpl;
+        document.querySelectorAll('.tpl-btn').forEach(b=>{
+            b.classList.toggle('border-purple-400',b.dataset.tpl===tpl);
+            b.classList.toggle('bg-purple-500/10',b.dataset.tpl===tpl);
+            b.classList.toggle('border-white/10',b.dataset.tpl!==tpl);
+        });
+        const TNAMES={barber:'Barber Shop — Dark Bold',cafe:'Cafe — Warm Cozy',salon:'Salon — Elegant Rose',workshop:'Bengkel — Industrial',generic:'Generic — Modern Clean'};
+        document.getElementById('tpl-selected').innerHTML='<span class="text-purple-400 font-bold">'+tpl.toUpperCase()+'</span> — '+(TNAMES[tpl]||tpl);
+    }
+
+    async function loadBuilderLeads(){
+        try{
+            const r=await fetch('/api/leads?source=db&limit=50');const d=await r.json();
+            builderLeads=d.data||[];
+            const sel=document.getElementById('build-lead-select');
+            if(!sel)return;
+            sel.innerHTML='<option value="">-- Select Lead --</option>'+
+                builderLeads.map(l=>'<option value="'+l.id+'">'+catEmoji(l.category)+' '+l.business_name+' (Score: '+l.ai_score+')</option>').join('');
+        }catch(e){}
+        loadTemplates();
+    }
+
+    async function generateFromLead(){
+        const leadId=document.getElementById('build-lead-select')?.value;
+        if(!leadId){showToast('Select a lead first!','error');return}
+        const btn=document.getElementById('btn-generate-lead');
+        btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> GENERATING...';
+        try{
+            const r=await fetch('/api/architect/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lead_id:parseInt(leadId),template:selectedTemplate||undefined})});
+            const d=await r.json();
+            if(d.success){
+                showToast('Website generated for '+d.demo.business_name+' in '+d.generation_time_ms+'ms!');
+                loadDemos();
+                // Open preview
+                window.open(d.demo.preview_url,'_blank');
+            } else {
+                showToast(d.error||'Failed','error');
+            }
+        }catch(e){showToast('Error: '+e.message,'error')}
+        btn.disabled=false;btn.innerHTML='<i class="fas fa-bolt"></i>GENERATE WEBSITE<i class="fas fa-rocket"></i>';
+    }
+
+    async function generateCustom(){
+        const name=document.getElementById('custom-name')?.value;
+        if(!name){showToast('Enter a business name!','error');return}
+        const btn=document.getElementById('btn-generate-custom');
+        btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> BUILDING...';
+        try{
+            const r=await fetch('/api/architect/generate-from-data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+                business_name:name,
+                category:selectedTemplate||'generic',
+                address:document.getElementById('custom-address')?.value||'',
+                phone:document.getElementById('custom-phone')?.value||'',
+                rating:parseFloat(document.getElementById('custom-rating')?.value)||4.5,
+                review_count:parseInt(document.getElementById('custom-reviews')?.value)||100,
+                template:selectedTemplate||undefined
+            })});
+            const d=await r.json();
+            if(d.success){
+                showToast('Custom website built in '+d.generation_time_ms+'ms!');
+                loadDemos();
+                window.open(d.demo.preview_url,'_blank');
+            } else {
+                showToast(d.error||'Failed','error');
+            }
+        }catch(e){showToast('Error: '+e.message,'error')}
+        btn.disabled=false;btn.innerHTML='<i class="fas fa-wand-magic-sparkles"></i>BUILD CUSTOM SITE';
+    }
+
+    async function batchBuild(){
+        const minScore=parseInt(document.getElementById('batch-build-score')?.value)||60;
+        const limit=parseInt(document.getElementById('batch-build-limit')?.value)||5;
+        const btn=document.getElementById('btn-batch-build');
+        btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> BATCH BUILDING...';
+        try{
+            const r=await fetch('/api/architect/batch-generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({min_score:minScore,limit,template:selectedTemplate||undefined})});
+            const d=await r.json();
+            if(d.success){
+                showToast(d.total+' demos generated in '+d.generation_time_ms+'ms!');
+                loadDemos();
+                await loadStats();
+            } else {
+                showToast(d.error||'Failed','error');
+            }
+        }catch(e){showToast('Error: '+e.message,'error')}
+        btn.disabled=false;btn.innerHTML='<i class="fas fa-layer-group"></i>BATCH BUILD ALL<i class="fas fa-bolt"></i>';
+    }
+
+    async function loadDemos(){
+        try{
+            const r=await fetch('/api/architect/demos');const d=await r.json();
+            document.getElementById('demo-count').textContent=d.total+' demos';
+            const c=document.getElementById('demos-container');
+            if(!d.data||!d.data.length){
+                c.innerHTML='<div class="text-center py-6"><div class="text-3xl mb-2 opacity-30"><i class="fas fa-globe"></i></div><p class="text-[11px] text-white/30">No demos yet. Generate from leads or custom!</p></div>';
+                return;
+            }
+            const TPL_COLOR={barber:'gold',cafe:'orange-400',salon:'pink-400',workshop:'yellow-400',generic:'indigo-400'};
+            const TPL_EMOJI={barber:'💈',cafe:'☕',salon:'💅',workshop:'🔧',generic:'🏪'};
+            c.innerHTML=d.data.map(dm=>'<div class="glass rounded-2xl p-4">'+
+                '<div class="flex items-start justify-between mb-2">'+
+                    '<div class="flex items-center gap-2"><span class="text-lg">'+(TPL_EMOJI[dm.template_type]||'🏪')+'</span><div><div class="font-display font-bold text-sm text-white">'+dm.business_name+'</div><div class="text-[10px] text-white/40">'+dm.template_type+' template</div></div></div>'+
+                    '<div class="flex flex-col items-end gap-1"><span class="text-[8px] font-mono bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">'+dm.status+'</span><span class="text-[8px] font-mono text-white/30">👁 '+dm.views+' views</span></div>'+
+                '</div>'+
+                '<div class="flex gap-2">'+
+                    '<a href="'+dm.preview_url+'" target="_blank" class="flex-1 bg-purple-500/10 border border-purple-400 py-2 rounded-xl text-[10px] font-display font-bold text-purple-400 hover:bg-purple-500/20 transition-all flex items-center justify-center gap-1"><i class="fas fa-external-link-alt"></i>PREVIEW</a>'+
+                    '<button onclick="copyDemoLink(\\''+dm.preview_url+'\\')" class="flex-1 glass-gold py-2 rounded-xl text-[10px] font-display font-bold text-gold flex items-center justify-center gap-1 hover:bg-gold/10 transition-all"><i class="fas fa-copy"></i>COPY LINK</button>'+
+                    '<button onclick="sendDemoViaWA(\\''+dm.id+'\\',\\''+escHtml(dm.business_name)+'\\')" class="flex-1 bg-green-500/10 border border-green-400 py-2 rounded-xl text-[10px] font-display font-bold text-green-400 hover:bg-green-500/20 transition-all flex items-center justify-center gap-1"><i class="fab fa-whatsapp"></i>SEND</button>'+
+                '</div>'+
+            '</div>').join('');
+        }catch(e){console.error(e)}
+    }
+
+    function copyDemoLink(url){
+        const full=window.location.origin+url;
+        navigator.clipboard.writeText(full).then(()=>showToast('Link copied: '+full)).catch(()=>showToast('Copy failed','error'));
+    }
+
+    function sendDemoViaWA(demoId,name){
+        const full=window.location.origin+'/demo/'+demoId;
+        const text=encodeURIComponent('Halo! Saya buatkan preview website untuk '+name+'. Silakan cek di sini: '+full+' \\n\\nGratis, tanpa biaya. Kalau cocok bisa kita lanjut. 🙏');
+        window.open('https://wa.me/?text='+text,'_blank');
+        showToast('Opening WhatsApp to share demo...');
+    }
+
     // ===================== ACTIVITY LOG =====================
     async function loadActivity(){
         try{
@@ -625,10 +833,26 @@ export const dashboardHTML = `<!DOCTYPE html>
         }catch(e){}
     }
 
+    // ===================== QUICK BUILD FROM LEADS TAB =====================
+    async function quickBuildDemo(leadId,name){
+        showToast('Building website for '+name+'...','info');
+        try{
+            const r=await fetch('/api/architect/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lead_id:leadId})});
+            const d=await r.json();
+            if(d.success){
+                showToast('Website built for '+d.demo.business_name+'!');
+                window.open(d.demo.preview_url,'_blank');
+            } else showToast(d.error||'Failed','error');
+        }catch(e){showToast('Error: '+e.message,'error')}
+    }
+
     // ===================== EVENT LISTENERS =====================
     document.getElementById('btn-hunt')?.addEventListener('click',startHunt);
     document.getElementById('btn-bulk')?.addEventListener('click',startBulkHunt);
     document.getElementById('btn-batch-wa')?.addEventListener('click',batchGenerateWA);
+    document.getElementById('btn-generate-lead')?.addEventListener('click',generateFromLead);
+    document.getElementById('btn-generate-custom')?.addEventListener('click',generateCustom);
+    document.getElementById('btn-batch-build')?.addEventListener('click',batchBuild);
     document.getElementById('lead-search')?.addEventListener('input',()=>{clearTimeout(window._st);window._st=setTimeout(loadLeads,300)});
     document.getElementById('lead-filter-cat')?.addEventListener('change',loadLeads);
     document.getElementById('lead-filter-status')?.addEventListener('change',loadLeads);
@@ -638,7 +862,7 @@ export const dashboardHTML = `<!DOCTYPE html>
     (async()=>{
         renderChips();
         const hash=window.location.hash.replace('#','');
-        if(['predator','leads','closer','treasury'].includes(hash))switchTab(hash);
+        if(['predator','leads','closer','builder','treasury'].includes(hash))switchTab(hash);
         await loadStats();
         await loadActivity();
         await pollScoutStatus();
